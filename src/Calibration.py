@@ -13,7 +13,9 @@ class Calibration:
     ):
         self.source_images_directory        = source_images_directory
         self.destination_image_sub_directory= destination_image_sub_directory
-        self.chessboard_y, self.chessboard_x= chessboard_shape
+        self.cornered_output_images         = str(self.destination_image_sub_directory+'/Cornered')
+        self.undistorted_output_images      = str(self.destination_image_sub_directory+'/Undistorted')
+        self.chessboard_x, self.chessboard_y= chessboard_shape
         self.logger                         = logger
         self.name_list_of_boards            = os.listdir(self.source_images_directory)
         self.number_of_boards               = len(self.name_list_of_boards)
@@ -41,7 +43,7 @@ class Calibration:
             self.image_size = gray_image.shape[::-1]
 
             # Find its corners
-            ret, corners = cv2.findChessboardCorners(gray_image, (self.chessboard_y, self.chessboard_x), None)
+            ret, corners = cv2.findChessboardCorners(gray_image, (self.chessboard_x, self.chessboard_y), None)
 
             if ret:
                 self.object_points.append(object_points)
@@ -53,7 +55,8 @@ class Calibration:
                     (self.chessboard_y, self.chessboard_x), \
                     corners, \
                     ret)
-                self.logger.save_image(str(self.destination_image_sub_directory), img_name, image)
+                # Saved image with corners
+                self.logger.save_image(str(self.cornered_output_images), img_name, image)
             else:
                 self.logger.log_error('Can not find all needed corners in {}'.format(str(img_name)))
         
@@ -63,8 +66,22 @@ class Calibration:
                 self.image_points, \
                 self.image_size, \
                 None, None)
+
+        # save corrected images
+        self.__save_undistorted_images(calibration_parameters[1], calibration_parameters[2])
+
         # return onlt camera_matrix, and dis_coef
         return calibration_parameters[1], calibration_parameters[2]
             
 
-    
+    def __save_undistorted_images(self, camera_matrix, distortion_coef):
+        cornered_images_list = os.listdir(str('./results/'+self.cornered_output_images))
+        
+        for cornered_img in cornered_images_list:
+            image_path = '{}/{}'.format(str('./results/'+self.cornered_output_images), str(cornered_img))
+            image_obj  = cv2.imread(image_path)
+
+            self.logger.save_image( \
+                str(self.undistorted_output_images), \
+                cornered_img, 
+                cv2.undistort(image_obj, camera_matrix, distortion_coef, None, camera_matrix))
