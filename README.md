@@ -1,39 +1,131 @@
-## Advanced Lane Finding
+# **Advanced Lane Finding Project**
 [![Udacity - Self-Driving Car NanoDegree](https://s3.amazonaws.com/udacity-sdc/github/shield-carnd.svg)](http://www.udacity.com/drive)
-![Lanes Image](./examples/example_output.jpg)
 
-In this project, your goal is to write a software pipeline to identify the lane boundaries in a video, but the main output or product we want you to create is a detailed writeup of the project.  Check out the [writeup template](https://github.com/udacity/CarND-Advanced-Lane-Lines/blob/master/writeup_template.md) for this project and use it as a starting point for creating your own writeup.  
+![Lanes Image](./output_vedios/Result_vedio.gif)
 
-Creating a great writeup:
+
+
+> In this project, the goal is to develope a software pipeline to identify the lane boundaries in a video from a front-facing camera on a car.
+
+
+
+[//]: # (Image References)
+
+[image1]: ./results/Calibration_results/Cornered/calibration2.jpg "Cornedred Chessboard"
+[image2]: ./results/Calibration_results/Undistorted/calibration2.jpg "Undistorted Chessboard"
+
+[image3]: ./results/Region/test2.jpg "Region"
+[image4]: ./results/Undistort/test2.jpg "Undistorted"
+[image5]: ./results/Perspective/test2.jpg "Prespective Transformed"
+[image6]: ./results/Color/test2.jpg  "Color Thresholds"
+[image7]: ./results/Binary/test2.jpg  "Edge Thresholds"
+[image8]: ./results/Lane_pixels/test2.jpg  "Sliding window"
+[image9]: ./output_images/test2.jpg  "Result"
+[video1]: ./output_vedios/output_project_video.mp4 "Video"
 ---
-A great writeup should include the rubric points as well as your description of how you addressed each point.  You should include a detailed description of the code used in each step (with line-number references and code snippets where necessary), and links to other supporting documents or external references.  You should include images in your writeup to demonstrate how your code works with examples.  
+### Camera Calibration
 
-All that said, please be concise!  We're not looking for you to write a book here, just a brief description of how you passed each rubric point, and references to the relevant code :). 
+* Since this step is very streat forward, i have designed it to be a separate class/object.
+* Once the object is created all needed operations will be executed automatically in the following sequance:  
+  * Getting all images names from the provided directory.  
+  * Start fetching images and try to find corners using [`cv2.findChessboardCorners(image, patternSize, corners, flags)`](http://docs.opencv.org/2.4/modules/calib3d/doc/camera_calibration_and_3d_reconstruction.html?highlight=findchessboardcorners#cv2.findChessboardCorners)
+  * If ther defined number of corners exists, then we save both **opject_points** and **image_points**. If not, then do nothing about this image.
+  * Using the previously saved points to draw corners on the images using [`cv2.drawChessboardCorners(image, patternSize, corners, patternWasFound)`](https://docs.opencv.org/2.4/modules/calib3d/doc/camera_calibration_and_3d_reconstruction.html?highlight=drawchessboardcorners#drawchessboardcorners)
+  * A separate getter function wase developed for getting the valuse of both **camera matrix** and **distortion coefficient** to be used from within the main file later on.
 
-You're not required to use markdown for your writeup.  If you use another method please just submit a pdf of your writeup.
+  The implementation [HERE](https://github.com/Mohamed-Abdulaty/UDACITY-CarND-P2-Advanced-Lane-Lines/blob/7c989315c27cba3bb5935cb3ab2299960c79df67/src/Calibration.py#L6)
 
-The Project
+***Note:***  
+  *All results has been saved to ./results/calibration_results/Cornered and ./results/calibration_results/Undistorted* 
+
+
+| Cornered distorted  | Undistorted         |
+|:-------------------:|:-------------------:|
+| ![alt text][image1] | ![alt_text][image2] |
+
+
+
 ---
+### **Pinpeline**
 
-The goals / steps of this project are the following:
+* Since there is a lot of tuning for multiple parameters. A dedecated class was created by the name [Parameters](https://github.com/Mohamed-Abdulaty/UDACITY-CarND-P2-Advanced-Lane-Lines/blob/7c989315c27cba3bb5935cb3ab2299960c79df67/src/Parameters.py#L3) and in the following steps i'll illustrate the steps and related parameters:   
+  * Select region of interest (`region`)
+  * Perspective transform (`source_points`) and (`destination_points`)
+  * Lane pixel detection
+    - Color threshold (`yellow_lane_hsv`, `white_lane_hsv`)
+    - Edge detection  (`gradient_thrs_x`, `gradient_thrs_y`, `gradient_thrs_mag`, `gradient_thrs_dir`, `sobel_kernal_size`)
+  * Lane detection (`window_marg`, `window_min`)
+---
+  #### ***Region of Interest (RoI)***
+  ![alt text][image3]
+  Selecting the important part of the image which shall - normally - include the lane lines, and remove the remaining part.
 
-* Compute the camera calibration matrix and distortion coefficients given a set of chessboard images.
-* Apply a distortion correction to raw images.
-* Use color transforms, gradients, etc., to create a thresholded binary image.
-* Apply a perspective transform to rectify binary image ("birds-eye view").
-* Detect lane pixels and fit to find the lane boundary.
-* Determine the curvature of the lane and vehicle position with respect to center.
-* Warp the detected lane boundaries back onto the original image.
-* Output visual display of the lane boundaries and numerical estimation of lane curvature and vehicle position.
+  This logic is implemented [HERE](https://github.com/Mohamed-Abdulaty/UDACITY-CarND-P2-Advanced-Lane-Lines/blob/7c989315c27cba3bb5935cb3ab2299960c79df67/src/Pipeline.py#L321)
+  
+  ---
+  #### ***Distortion Correction***
+  ![alt_text][image4]
+  After getting the **camera matrix** and **distortion coefficient** from the calibration process. Appling them to the (RoI).
 
-The images for camera calibration are stored in the folder called `camera_cal`.  The images in `test_images` are for testing your pipeline on single frames.  If you want to extract more test images from the videos, you can simply use an image writing method like `cv2.imwrite()`, i.e., you can read the video in frame by frame as usual, and for frames you want to save for later you can write to an image file.  
+  This is implemented [HERE](https://github.com/Mohamed-Abdulaty/UDACITY-CarND-P2-Advanced-Lane-Lines/blob/7c989315c27cba3bb5935cb3ab2299960c79df67/src/Pipeline.py#L16)
 
-To help the reviewer examine your work, please save examples of the output from each stage of your pipeline in the folder called `output_images`, and include a description in your writeup for the project of what each image shows.    The video called `project_video.mp4` is the video your pipeline should work well on.  
+  ---
+  ### ***Perspective Transform***
+  ![alt_text][image5] 
+  The image is transformed to a bird's eye view to help calculate the road curvature.
 
-The `challenge_video.mp4` video is an extra (and optional) challenge for you if you want to test your pipeline under somewhat trickier conditions.  The `harder_challenge.mp4` video is another optional challenge and is brutal!
+  This is implemented [HERE](https://github.com/Mohamed-Abdulaty/UDACITY-CarND-P2-Advanced-Lane-Lines/blob/7c989315c27cba3bb5935cb3ab2299960c79df67/src/Pipeline.py#L129)
 
-If you're feeling ambitious (again, totally optional though), don't stop there!  We encourage you to go out and take video of your own, calibrate your camera and show us how you would implement this project from scratch!
+  ---
+  ### ***Lane Pixel Detection***
+  This step is done on tow stages:
+  | 1. Color Thresholding | 2. Edge Thresholding |
+  |:------------------:|:-----------------:|
+  |![alt_text][image6] |![alt_text][image7]|
 
-## How to write a README
-A well written README file can enhance your project and portfolio.  Develop your abilities to create professional README files by completing [this free course](https://www.udacity.com/course/writing-readmes--ud777).
+  The implementation for color detection/masking is [HERE](https://github.com/Mohamed-Abdulaty/UDACITY-CarND-P2-Advanced-Lane-Lines/blob/7c989315c27cba3bb5935cb3ab2299960c79df67/src/Pipeline.py#L27), and the edge detection is [HERE](https://github.com/Mohamed-Abdulaty/UDACITY-CarND-P2-Advanced-Lane-Lines/blob/7c989315c27cba3bb5935cb3ab2299960c79df67/src/Pipeline.py#L55)
+
+  ---
+  ### ***Lane Detection***
+  ![alt_text][image8]
+  Lanes a detected by using a sliding window that search for pixels that belong to the lane based on the pixels that were detect previously as being part of the lane
+
+  The implementation is [HERE](https://github.com/Mohamed-Abdulaty/UDACITY-CarND-P2-Advanced-Lane-Lines/blob/7c989315c27cba3bb5935cb3ab2299960c79df67/src/Pipeline.py#L155)
+
+  ---
+  ### ***Car Position & Road Curvature***
+  ![alt_text][image9]
+  The calculation of the road curvature and car position with respect to the lane lines from the image has been done by carefully choosing the source_points and destination_points used in the perspective transformation step. 
+  
+  By using the knowledge that the width of a lane is 12 feet and the length of a lane line is 10 feet, A pixel to feet conversion function were implemented.
+
+  The position of the car in respect to the center of the lane is calculated by finding the offset of the middle of the lane with the middle of the image.
+
+  The curvature of the lane is done by using cv2.fitPoly which will find a best fit polynomial to the provided points.
+
+  The implementation is [HERE](https://github.com/Mohamed-Abdulaty/UDACITY-CarND-P2-Advanced-Lane-Lines/blob/7c989315c27cba3bb5935cb3ab2299960c79df67/src/Pipeline.py#L275)
+
+---
+### The output data
+* Calibration:  
+  * ./results/calibration_results/Cornered
+  * ./results/calibration_results/Undistorted
+* The results of the pipeline:  
+  * images: ./output_images
+  * vedios: ./output_vedios
+* Pipeline steps:  
+  * ./results/Region
+  * ./results/Undistort
+  * ./results/Color
+  * ./results/Binary
+  * ./results/Perspective
+  * ./results/Lane_pixels
+
+---
+## Problems & Improvements
+* The region of interest selection is mainly responsible for the robustness of the pipeline since it must be tuned for the video feed.  
+* The color thresholding is also tuned for the particular conditions of the video Significant inclines or declines on the road would break the assumption that the birds eye view is on a flat plane.  
+  * Using LAB, and LUV color spaces could help ...
+* Markers on the road that appear lane-line-like (spilled paint) will completely throw off the lane detection.  
+  * In case of one solid line and the lane width the prediction could be done. However, in case of no solid line the detection could be a little harder.
 
